@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reembolso dos Gerentes</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* ======= COLE AQUI O LINK DO APP DA WEB (Apps Script) no script lá embaixo: const ENDPOINT = "..." ======= */
+:root{--bg:#f6f5f0;--s:#fff;--ink:#15140f;--mu:#6b6858;--ln:#e3e0d3;--band:#15140f;--y:#f5c400;--ys:#fff4c2;--ok:#1f7a3d;--oks:#e1f2e6;--w:#8a5a00;--ws:#fdf0d2;--err:#b3261e}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Figtree,system-ui,sans-serif}
+header{background:var(--band);color:#f8f6ee;padding:18px 16px}
+.brand{max-width:640px;margin:auto;font:800 18px Archivo,sans-serif;display:flex;gap:10px;align-items:center;letter-spacing:.02em}
+.brand i{width:14px;height:14px;background:var(--y);transform:skewX(-14deg);display:inline-block}
+main{max-width:640px;margin:auto;padding:20px 16px 48px;display:grid;gap:16px}
+h1{font:800 22px Archivo,sans-serif;margin:0}.sub{color:var(--mu);margin:2px 0 0}
+.card{background:var(--s);border:1px solid var(--ln);border-radius:14px;padding:18px}
+form{display:grid;gap:14px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:480px){.row{grid-template-columns:1fr}}
+label{display:grid;gap:6px;font-weight:600;font-size:13px}.hint{font-weight:400;color:var(--mu)}
+input,select{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--ln);border-radius:10px;padding:11px 12px;width:100%}
+.money{position:relative}.money b{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--mu);font-weight:500}
+.money input{padding-left:40px;font-family:"JetBrains Mono",monospace;font-size:18px}
+.photo{border:2px dashed var(--ln);border-radius:12px;padding:14px;display:grid;gap:10px;background:var(--bg);cursor:pointer}
+.photo.has{border-style:solid;border-color:var(--y)}
+.photo input{position:absolute;width:1px;height:1px;opacity:0}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}.thumbs div{position:relative}
+.thumbs img{width:72px;height:72px;object-fit:cover;border-radius:8px;display:block}
+.thumbs button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:var(--ink);color:#fff;font-size:13px;cursor:pointer}
+.geo{border-radius:12px;padding:12px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:14px}
+.geo.wait{background:var(--ys);color:var(--w)}.geo.ok{background:var(--oks);color:var(--ok)}.geo.bad{background:#fde2e0;color:var(--err)}
+.btn{border:0;border-radius:12px;padding:14px 18px;font:700 16px Archivo,sans-serif;cursor:pointer;background:var(--y);color:var(--ink)}
+.btn[disabled]{opacity:.5;cursor:wait}.btn.sm{padding:8px 12px;font:600 13px Figtree,sans-serif;background:var(--ink);color:#fff;border-radius:9px;white-space:nowrap}
+.msg{font-size:14px;padding:10px 12px;border-radius:10px}.msg.ok{background:var(--oks);color:var(--ok)}.msg.err{background:var(--ws);color:var(--err)}
+</style></head><body>
+<header><div class="brand"><i></i>REEMBOLSO DOS GERENTES</div></header>
+<main>
+  <div><h1>Nova despesa</h1><p class="sub">Preencha, tire a foto do comprovante e envie. A localização do celular é registrada junto.</p></div>
+  <div class="geo wait" id="geo"><span id="geo-t">📍 Precisamos da sua localização para registrar a despesa.</span><button class="btn sm" id="geo-b" type="button">Ativar</button></div>
+  <div class="card">
+    <form id="f" novalidate>
+      <label>Seu nome<input id="nome" autocomplete="name" placeholder="Ex.: Carlos Souza"></label>
+      <div class="row">
+        <label>Valor<div class="money"><b>R$</b><input id="valor" inputmode="decimal" placeholder="0,00"></div></label>
+        <label>Data da despesa<input id="data" type="date"></label>
+      </div>
+      <label>Tipo de despesa<select id="tipo">
+        <option>Combustível</option><option>Alimentação</option><option>Pedágio</option><option>Estacionamento</option>
+        <option>Hospedagem</option><option>Uber / Táxi</option><option>Material para loja</option><option>Manutenção do veículo</option><option>Outros</option>
+      </select></label>
+      <label>Descrição <span class="hint">(onde, por quê, qual loja)</span><input id="desc" placeholder="Ex.: Almoço visita loja Itajaí"></label>
+      <label class="photo" id="pbox" for="foto">
+        <span><b id="pt">📷 Fotos do comprovante</b><br><span class="hint" id="ps">Obrigatória. Toque para tirar ou escolher. Pode mandar até 6 fotos.</span></span>
+        <div class="thumbs" id="thumbs"></div>
+        <input id="foto" type="file" accept="image/*" multiple>
+      </label>
+      <div id="msg" class="msg" hidden></div>
+      <button class="btn" id="enviar" type="submit">Enviar despesa</button>
+    </form>
+  </div>
+</main>
+<script>
+const ENDPOINT = "COLE_AQUI_O_LINK_DO_APP_DA_WEB";   // termina em /exec
+
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const hoje=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+$('#data').value=hoje(); $('#nome').value=ls.get('nome')||'';
+const BRL=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+function msg(t,ok){const m=$('#msg');m.textContent=t;m.className='msg '+(ok?'ok':'err');m.hidden=!t}
+
+/* ---------- localização ---------- */
+let pos=null, negado=false;
+function geoUI(estado,texto){$('#geo').className='geo '+estado;$('#geo-t').textContent=texto;$('#geo-b').hidden=estado==='ok'}
+function pedirGPS(){
+  return new Promise(res=>{
+    if(!navigator.geolocation){geoUI('bad','Este celular não informa localização.');return res(null)}
+    geoUI('wait','📍 Buscando sua localização…');
+    navigator.geolocation.getCurrentPosition(p=>{
+      pos={lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),precisao:p.coords.accuracy,hora:new Date(p.timestamp).toISOString()};
+      negado=false; geoUI('ok','📍 Localização ativa (precisão ~'+Math.round(p.coords.accuracy)+' m)'); res(pos);
+    },err=>{
+      if(err.code===1){negado=true;geoUI('bad','Localização bloqueada. Libere a localização para este site nas configurações do navegador e toque em Tentar de novo.')}
+      else geoUI('bad','Não consegui pegar a localização ('+(err.code===3?'demorou demais':'sinal indisponível')+'). Vá para um lugar aberto e toque em Tentar de novo.');
+      $('#geo-b').textContent='Tentar de novo'; res(null);
+    },{enableHighAccuracy:true,timeout:20000,maximumAge:60000});
+  });
+}
+$('#geo-b').onclick=pedirGPS;
+if(navigator.permissions&&navigator.permissions.query){navigator.permissions.query({name:'geolocation'}).then(s=>{if(s.state==='granted')pedirGPS()}).catch(()=>{})}
+
+/* ---------- fotos ---------- */
+let fotos=[]; // dataURLs comprimidas
+async function comprimir(file,lado,q){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=url});
+    const s=Math.min(1,lado/Math.max(img.width,img.height)), c=document.createElement('canvas');
+    c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    return c.toDataURL('image/jpeg',q);
+  }finally{URL.revokeObjectURL(url)}
+}
+function desenhar(){
+  $('#thumbs').innerHTML=fotos.map((f,i)=>'<div><img src="'+f+'" alt="Foto '+(i+1)+'"><button type="button" data-rm="'+i+'" aria-label="Tirar foto">×</button></div>').join('');
+  $('#pbox').classList.toggle('has',fotos.length>0);
+  $('#pt').textContent=fotos.length?'📷 '+fotos.length+' foto(s) anexada(s)':'📷 Fotos do comprovante';
+  $('#ps').textContent=fotos.length<6?'Toque para adicionar mais fotos.':'Limite de 6 fotos.';
+}
+$('#foto').onchange=async e=>{
+  for(const f of [...e.target.files]){ if(fotos.length>=6) break; try{fotos.push(await comprimir(f,1600,.72))}catch(err){msg('Não consegui ler uma das imagens.',false)} }
+  e.target.value=''; desenhar();
+};
+$('#thumbs').onclick=e=>{const b=e.target.closest('[data-rm]');if(!b)return;e.preventDefault();fotos.splice(+b.dataset.rm,1);desenhar()};
+
+/* ---------- envio ---------- */
+const valorNum=s=>{s=String(s).trim().replace(/\s|R\$/g,'');if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');const n=Number(s);return isFinite(n)?Math.round(n*100)/100:NaN};
+$('#f').addEventListener('submit',async e=>{
+  e.preventDefault(); msg('');
+  const nome=$('#nome').value.trim(), valor=valorNum($('#valor').value), data=$('#data').value;
+  if(!nome) return msg('Escreva seu nome.',false);
+  if(!(valor>0)) return msg('Informe um valor válido, por exemplo 37,50.',false);
+  if(!data) return msg('Escolha a data da despesa.',false);
+  if(!fotos.length) return msg('Anexe a foto do comprovante.',false);
+  const b=$('#enviar'); b.disabled=true; b.textContent='Pegando localização…';
+  const g=await pedirGPS();   // localização na hora do envio
+  if(!g && negado){ b.disabled=false; b.textContent='Enviar despesa'; return msg('Para enviar, libere a localização do celular para este site.',false); }
+  b.textContent='Enviando…';
+  try{
+    const r=await fetch(ENDPOINT,{method:'POST',body:JSON.stringify({nome,valor,data,categoria:$('#tipo').value,descricao:$('#desc').value.trim(),fotos,gps:g,gpsErro:g?'':$('#geo-t').textContent.slice(0,80)})});
+    const j=await r.json();
+    if(!j.ok) throw new Error(j.erro||'erro');
+    ls.set('nome',nome);
+    $('#valor').value='';$('#desc').value='';fotos=[];desenhar();
+    msg('Despesa de '+BRL.format(valor)+' enviada'+(g?' com localização.':' (sem localização: o painel vai mostrar isso).'),true);
+  }catch(err){ msg('Não foi possível enviar agora. Verifique a internet e tente de novo.',false) }
+  finally{ b.disabled=false; b.textContent='Enviar despesa' }
+});
+</script>
+</body></html>
